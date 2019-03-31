@@ -1,0 +1,65 @@
+#include <iostream>
+#include <pthread.h>
+#include <semaphore.h>
+#include <random>
+#include <unistd.h>
+
+using namespace std;
+
+#define BUFFER_SIZE 100
+
+int buffer[BUFFER_SIZE] ;
+
+int index = 0;
+
+sem_t full, empty;
+
+pthread_mutex_t mx;
+
+void* producing(void* arg)
+{
+    int amount=100 ;
+    
+	while(amount>0)
+	{
+		sleep(1);
+		sem_wait(&empty);
+		pthread_mutex_lock(&mx);
+		int item = rand()%100;
+		buffer[index++] = item;
+		cout<<"Item Produced: "<<item<<endl;
+		pthread_mutex_unlock(&mx);
+		sem_post(&full);
+		amount-- ;
+	}
+}
+
+void* consuming(void* arg)
+{
+    int amount =100;
+    
+	while(amount>0)
+	{
+		sleep(1);
+		sem_wait(&full);
+		pthread_mutex_lock(&mx);
+		int item = buffer[--index];
+		cout<<"Item Consumed: "<<item<<endl;
+		pthread_mutex_unlock(&mx);
+		sem_post(&empty);
+		amount--;
+	}
+}
+
+int main()
+{
+	pthread_t producer, consumer;
+	
+	sem_init(&empty, 0, BUFFER_SIZE);
+	sem_init(&full, 0, 0);
+	
+	pthread_mutex_init(&mx, NULL);
+	pthread_create(&producer, NULL, producing, NULL);
+	pthread_create(&consumer, NULL, consuming, NULL);
+	pthread_exit(NULL);
+}
